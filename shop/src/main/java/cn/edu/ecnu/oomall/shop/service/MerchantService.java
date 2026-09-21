@@ -85,6 +85,14 @@ public class MerchantService {
         redis.delete(sessionKey);
     }
 
+    public Shop getShopDetail(Long merchantId) {
+        Optional<Shop> optionalShop = shops.findByMerchantId(merchantId);
+        if (optionalShop.isEmpty()) {
+            throw new BusinessException("SHOP_NOT_FOUND", HttpStatus.NOT_FOUND, "shop not found");
+        }
+        return optionalShop.get();
+    }
+
     public Shop setShopOnline(Long merchantId) {
         Optional<Shop> optionalShop = shops.findByMerchantId(merchantId);
         if (optionalShop.isEmpty()) {

@@ -357,7 +357,7 @@ MyBatis 不提供 JPA 的脏检查：修改地址后，Service 必须显式调�
 | GET | `/shop-status-options` | 匿名 | 查询可用于展示和筛选的店铺状态选项 | 无 | `ShopStatusOption[]` | 返回 code/name 状态列表，不暴露 Java Enum 名 | 无 | OOMALL 适配 |
 | POST | `/shop-applications` | 商户 | 提交一份开店申请 | `name`、`contact`、`mobile` | 201，`ShopApplicationView` | 检查当前商户没有有效店铺、名称不重复；保存 `NEW` | 已有店铺、重名、字段非法 | OOMALL 适配 |
 | GET | `/shops` | 匿名 | 分页浏览顾客可见的已上线店铺 | `name`、`page`、`pageSize` | `Page<PublicShopView>` | 按 name 分页查询；只返回 `ONLINE` 店铺和公开字段 | page/pageSize 非法 | OOMALL 适配 |
-| GET | `/merchant/shop/management-detail` | 商户 | 查询当前商户自己店铺的管理详情，含审核信息 | 无 | `ShopManagementView` | 从 Session 取得 merchantId，再查询其店铺；商户不传 shopId | 不存在、越权 | OOMALL 适配 |
+| GET | `/merchant/shop/detail` | 商户 | 查询当前商户自己店铺的管理详情，含审核信息 | 无 | `ShopManagementView` | 从 Session 取得 merchantId，再查询其店铺；商户不传 shopId | 不存在、越权 | OOMALL 适配 |
 | GET | `/shops/{shopId}/management-detail` | 平台管理员 | 查询指定店铺的管理详情，含审核信息 | 无 | `ShopManagementView` | 按 shopId 查询；平台管理员可查看任意店铺 | 不存在、非平台身份 | OOMALL 适配 |
 | PATCH | `/merchant/shop/detail` | 商户 | 修改当前商户自己店铺的名称和联系信息 | `name`、`contact`、`mobile` | `ShopManagementView` | 从 Session 取得 merchantId；状态和审核字段不可从 DTO 写入 | 不存在、越权、重名 | OOMALL 适配 |
 | GET | `/shop-review-queue` | 平台管理员 | 分页查看平台待处理及历史店铺申请 | `status`、`name`、`page`、`pageSize` | `Page<ShopManagementView>` | 按 status/name 分页查全部状态；不再让无意义的 `{id}/shops` 承担平台列表 | 非平台身份、分页非法 | OOMALL 适配 |
@@ -449,7 +449,7 @@ mockMvc.perform(post("/shop-applications")
 | POST `/shop-applications` | `testCreateShopsWhenUserIsAdmin`、`testCreteShopWhenUserHasNoShop`、`testCreteShopWhenUserHasShop` | 名称并发重复、请求字段校验、响应包含申请状态 `NEW` |
 | GET `/shops` | `testRetrieveShopsGivenParam`、`testRetrieveShopsWithoutParam` | 只返回 ONLINE，不返回 NEW/OFFLINE/REJECTED；分页边界 |
 | PATCH `/merchant/shop/contact` | Redis 命中/未命中、无店铺、ABANDON 状态用例 | 从 Session 取得商户店铺、DTO 不能篡改 status |
-| GET `/merchant/shop/management-detail`、`/shops/{shopId}/management-detail` | 当前商户、指定店铺查询用例 | 未登录、无店铺、非平台管理员 |
+| GET `/merchant/shop/detail`、`/shops/{shopId}/management-detail` | 当前商户、指定店铺查询用例 | 未登录、无店铺、非平台管理员 |
 | GET `/shop-review-queue` | 平台成功与普通商户失败用例 | status/name 组合分页 |
 | PUT `/shop-applications/{shopId}/review` | 商户审核失败、管理员成功、错误状态用例 | 拒绝原因、拒绝后重提、两管理员并发审核仅一人成功 |
 | PUT `/merchant/shop/online`、`/merchant/shop/offline`、`/shops/{shopId}/offline` | 正确状态与错误状态用例 | 当前商户定位、管理员权限、重复请求幂等语义 |

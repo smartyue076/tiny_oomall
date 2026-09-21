@@ -83,12 +83,16 @@ curl -i -X PUT 'http://127.0.0.1:8082/api/merchant/shop/detail' \
     "mobile": "13910000001"
   }'
 
-# 13. 平台管理员查看指定店铺的管理详情
+# 13. 商户查看自己的店铺管理详情，不需要传 shopId。
+curl -i 'http://127.0.0.1:8082/api/merchant/shop/detail' \
+  -H 'X-Session-Id: YOUR_MERCHANT_SESSION_ID'
+
+# 14. 平台管理员查看指定店铺的管理详情
 # 将 1 替换为实际的 shopId。
 curl -i 'http://127.0.0.1:8082/api/shops/1/management-detail' \
   -H 'X-Session-Id: YOUR_PLATFORM_ADMIN_SESSION_ID'
 
-# 14. 平台管理员通过店铺申请。通过后状态变为 OFFLINE，商户可再上线。
+# 15. 平台管理员通过店铺申请。通过后状态变为 OFFLINE，商户可再上线。
 curl -i -X PUT 'http://127.0.0.1:8082/api/shop-applications/1/review' \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: YOUR_PLATFORM_ADMIN_SESSION_ID' \
@@ -96,7 +100,7 @@ curl -i -X PUT 'http://127.0.0.1:8082/api/shop-applications/1/review' \
     "conclusion": "APPROVED"
   }'
 
-# 15. 平台管理员拒绝店铺申请。
+# 16. 平台管理员拒绝店铺申请。
 curl -i -X PUT 'http://127.0.0.1:8082/api/shop-applications/1/review' \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: YOUR_PLATFORM_ADMIN_SESSION_ID' \
@@ -105,14 +109,14 @@ curl -i -X PUT 'http://127.0.0.1:8082/api/shop-applications/1/review' \
     "reason": "申请资料不完整"
   }'
 
-# 16. 商户上线自己的店铺。仅 OFFLINE 状态可以上线。
+# 17. 商户上线自己的店铺。仅 OFFLINE 状态可以上线。
 curl -i -X PUT 'http://127.0.0.1:8082/api/merchant/shop/online' \
   -H 'X-Session-Id: YOUR_MERCHANT_SESSION_ID'
 
-# 17. 商户下线自己的店铺。仅 ONLINE 状态可以下线。
+# 18. 商户下线自己的店铺。仅 ONLINE 状态可以下线。
 curl -i -X PUT 'http://127.0.0.1:8082/api/merchant/shop/offline' \
   -H 'X-Session-Id: YOUR_MERCHANT_SESSION_ID'
 
-# 18. 平台管理员下线指定店铺。将 1 替换为实际的 shopId。
+# 19. 平台管理员下线指定店铺。将 1 替换为实际的 shopId。
 curl -i -X PUT 'http://127.0.0.1:8082/api/shops/1/offline' \
   -H 'X-Session-Id: YOUR_PLATFORM_ADMIN_SESSION_ID'

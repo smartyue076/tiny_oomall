@@ -82,6 +82,19 @@ class MerchantServiceIntegrationTest {
     }
 
     @Test
+    void merchantCanReadItsOwnShopDetail() {
+        Shop written = new Shop(6L, "Merchant Detail Shop", "Frank", "13400000000");
+        written.setApplyTime(Instant.now());
+        shops.insert(written);
+
+        Shop read = service.getShopDetail(written.getMerchantId());
+
+        assertThat(read.getId()).isEqualTo(written.getId());
+        assertThat(read.getMerchantId()).isEqualTo(written.getMerchantId());
+        assertThat(read.getName()).isEqualTo("Merchant Detail Shop");
+    }
+
+    @Test
     void merchantCanPutAnOfflineShopOnline() {
         Shop written = new Shop(3L, "Online Shop", "Carol", "13700000000");
         written.setApplyTime(Instant.now());

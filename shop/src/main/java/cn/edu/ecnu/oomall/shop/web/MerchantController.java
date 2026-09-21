@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -57,6 +58,14 @@ public class MerchantController {
         service.logout(sessionId);
     }
 
+    @GetMapping("/merchant/shop/detail")
+    ApiResponse<ShopManagementView> getShopDetail() {
+        UserToken token = requireMerchant();
+        Long merchantId = token.userId();
+        Shop shop = service.getShopDetail(merchantId);
+        ShopManagementView view = ShopManagementView.of(shop);
+        return ApiResponse.ok(view);
+    }
 
 
     @PutMapping("/merchant/shop/online")
