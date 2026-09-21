@@ -1,0 +1,168 @@
+# 实验 0 的本地 Kubernetes 基础设施。密码仅用于开发环境，生产环境请改用外部 Secret 管理。
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tiny-oomall
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: infrastructure-credentials
+  namespace: tiny-oomall
+type: Opaque
+stringData:
+  mysql-root-password: root
+  mysql-user: tiny_oomall
+  mysql-password: tiny_oomall
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init
+  namespace: tiny-oomall
+data:
+  01-create-service-databases.sql: |
+    CREATE DATABASE IF NOT EXISTS shop;
+    CREATE DATABASE IF NOT EXISTS product;
+    CREATE DATABASE IF NOT EXISTS prodorder;
+    CREATE DATABASE IF NOT EXISTS payment;
+    GRANT ALL PRIVILEGES ON shop.* TO 'tiny_oomall'@'%';
+    GRANT ALL PRIVILEGES ON product.* TO 'tiny_oomall'@'%';
+    GRANT ALL PRIVILEGES ON prodorder.* TO 'tiny_oomall'@'%';
+    GRANT ALL PRIVILEGES ON payment.* TO 'tiny_oomall'@'%';
+    FLUSH PRIVILEGES;
+---
+apiVersion: v1
+kind: Service
+metadata: { name: mysql, namespace: tiny-oomall }
+spec:
+  selector: { app: mysql }
+  ports: [{ port: 3306, targetPort: mysql }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: mysql, namespace: tiny-oomall }
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector: { matchLabels: { app: mysql } }
+  template:
+    metadata: { labels: { app: mysql } }
+    spec:
+      containers:
+        - name: mysql
+          image: docker.io/library/mysql:8.4
+          # kind 本地开发环境预加载镜像，避免 kubelet 再次访问外部 Registry。
+          imagePullPolicy: Never
+          ports: [{ name: mysql, containerPort: 3306 }]
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: infrastructure-credentials, key: mysql-root-password } }
+            - name: MYSQL_DATABASE
+              value: customer
+            - name: MYSQL_USER
+              valueFrom: { secretKeyRef: { name: infrastructure-credentials, key: mysql-user } }
+            - name: MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: infrastructure-credentials, key: mysql-password } }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/mysql }
+            - { name: init, mountPath: /docker-entrypoint-initdb.d, readOnly: true }
+          readinessProbe: { exec: { command: ["sh", "-c", "mysqladmin ping -h localhost -p$MYSQL_ROOT_PASSWORD"] }, initialDelaySeconds: 15, periodSeconds: 5 }
+      volumes:
+        - name: init
+          configMap: { name: mysql-init }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec: { accessModes: ["ReadWriteOnce"], resources: { requests: { storage: 5Gi } } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: redis, namespace: tiny-oomall }
+spec: { selector: { app: redis }, ports: [{ port: 6379, targetPort: redis }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: redis, namespace: tiny-oomall }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: redis } }
+  template:
+    metadata: { labels: { app: redis } }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports: [{ name: redis, containerPort: 6379 }]
+          readinessProbe: { exec: { command: ["redis-cli", "ping"] }, initialDelaySeconds: 3, periodSeconds: 5 }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: rocketmq-namesrv, namespace: tiny-oomall }
+spec: { selector: { app: rocketmq-namesrv }, ports: [{ port: 9876, targetPort: namesrv }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: rocketmq-namesrv, namespace: tiny-oomall }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: rocketmq-namesrv } }
+  template:
+    metadata: { labels: { app: rocketmq-namesrv } }
+    spec: { containers: [{ name: namesrv, image: apache/rocketmq:5.3.1, command: ["sh", "mqnamesrv"], ports: [{ name: namesrv, containerPort: 9876 }] }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: rocketmq-broker, namespace: tiny-oomall }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: rocketmq-broker } }
+  template:
+    metadata: { labels: { app: rocketmq-broker } }
+    spec: { containers: [{ name: broker, image: apache/rocketmq:5.3.1, command: ["sh", "mqbroker", "-n", "rocketmq-namesrv:9876"] }] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: elasticsearch, namespace: tiny-oomall }
+spec: { selector: { app: elasticsearch }, ports: [{ port: 9200, targetPort: http }] }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: elasticsearch, namespace: tiny-oomall }
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  selector: { matchLabels: { app: elasticsearch } }
+  template:
+    metadata: { labels: { app: elasticsearch } }
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.15.5
+          ports: [{ name: http, containerPort: 9200 }]
+          args: ["-Ediscovery.type=single-node", "-Expack.security.enabled=false"]
+          env:
+            - { name: ES_JAVA_OPTS, value: "-Xms512m -Xmx512m" }
+          volumeMounts: [{ name: data, mountPath: /usr/share/elasticsearch/data }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec: { accessModes: ["ReadWriteOnce"], resources: { requests: { storage: 5Gi } } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: nacos, namespace: tiny-oomall }
+spec: { selector: { app: nacos }, ports: [{ name: http, port: 8848, targetPort: http }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: nacos, namespace: tiny-oomall }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: nacos } }
+  template:
+    metadata: { labels: { app: nacos } }
+    spec:
+      containers:
+        - name: nacos
+          image: nacos/nacos-server:v2.5.0
+          ports: [{ name: http, containerPort: 8848 }]
+          env: [{ name: MODE, value: standalone }]

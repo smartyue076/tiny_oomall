@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.ecnu.oomall.shop.repository.ShopRepository">
+    <resultMap id="ShopResult" type="cn.edu.ecnu.oomall.shop.domain.Shop">
+        <id property="id" column="id"/>
+        <result property="merchantId" column="merchant_id"/>
+        <result property="name" column="name"/>
+        <result property="contact" column="contact"/>
+        <result property="mobile" column="mobile"/>
+        <result property="status" column="status"/>
+        <result property="rejectReason" column="reject_reason"/>
+        <result property="auditorId" column="auditor_id"/>
+        <result property="auditTime" column="audit_time"/>
+        <result property="applyTime" column="gmt_create"/>
+        <result property="updatedAt" column="gmt_modified"/>
+    </resultMap>
+
+    <select id="findByName" resultMap="ShopResult">
+        SELECT id, merchant_id, name, contact, mobile, status,
+               reject_reason, auditor_id, audit_time, gmt_create, gmt_modified
+        FROM shop_shop
+        WHERE name = #{name}
+    </select>
+
+    <select id="findById" resultMap="ShopResult">
+        SELECT id, merchant_id, name, contact, mobile, status,
+               reject_reason, auditor_id, audit_time, gmt_create, gmt_modified
+        FROM shop_shop
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByMerchantId" resultMap="ShopResult">
+        SELECT id, merchant_id, name, contact, mobile, status,
+               reject_reason, auditor_id, audit_time, gmt_create, gmt_modified
+        FROM shop_shop
+        WHERE merchant_id = #{merchantId}
+    </select>
+
+    <select id="existsByName" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM shop_shop WHERE name = #{name})
+    </select>
+
+    <select id="existsByMerchantId" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM shop_shop WHERE merchant_id = #{merchantId})
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO shop_shop (merchant_id, name, contact, mobile, gmt_create)
+        VALUES (#{merchantId}, #{name}, #{contact}, #{mobile}, #{applyTime})
+    </insert>
+
+    <select id="findReviewQueue" resultMap="ShopResult">
+        SELECT id, merchant_id, name, contact, mobile, status,
+               reject_reason, auditor_id, audit_time, gmt_create, gmt_modified
+        FROM shop_shop
+        <where>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="name != null and name != ''">
+                AND name = #{name}
+            </if>
+        </where>
+        ORDER BY gmt_create DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countReviewQueue" resultType="long">
+        SELECT COUNT(*)
+        FROM shop_shop
+        <where>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="name != null and name != ''">
+                AND name = #{name}
+            </if>
+        </where>
+    </select>
+
+    <select id="countOnlineShopsQueue" resultType="long">
+        SELECT COUNT(*)
+        FROM shop_shop
+        WHERE status = 'ONLINE'
+    </select>
+
+    <select id="findOnlineShopsQueue" resultMap="ShopResult">
+        SELECT id, merchant_id, name, contact, mobile, status,
+               reject_reason, auditor_id, audit_time, gmt_create, gmt_modified
+        FROM shop_shop
+        WHERE status = 'ONLINE'
+        ORDER BY gmt_create DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <update id="updateReview">
+        UPDATE shop_shop
+        SET status = #{status},
+            reject_reason = #{rejectReason},
+            auditor_id = #{auditorId},
+            audit_time = #{auditTime},
+            gmt_modified = #{updatedAt}
+        WHERE id = #{id}
+        AND status = 'NEW'
+    </update>
+
+    <update id="updateStatus">
+        UPDATE shop_shop
+        SET status = #{status},
+            gmt_modified = #{updatedAt}
+        WHERE id = #{id}
+          AND status = #{expectedStatus}
+    </update>
+
+    <update id="updateDetail">
+        UPDATE shop_shop
+        <set>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="contact != null">
+                contact = #{contact},
+            </if>
+            <if test="mobile != null">
+                mobile = #{mobile},
+            </if>
+            gmt_modified = #{updatedAt}
+        </set>
+        WHERE id = #{id}
+    </update>
+</mapper>

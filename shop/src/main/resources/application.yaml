@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: shop
+  datasource:
+    # JDBC URL 中含有 ? 和 &，必须作为 YAML 字符串引用。
+    url: "jdbc:mysql://localhost:3307/shop?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC"
+    username: tiny_oomall
+    password: ${SHOP_DB_PASSWORD:tiny_oomall}
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+merchant:
+  session-ttl: PT24H
